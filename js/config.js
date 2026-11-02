@@ -1,10 +1,9 @@
 /**
  * Site configuration.
- * Leave contactEmail blank until a real address is provided.
- * Set formEndpoint to your API URL when the backend is ready.
- * The endpoint should accept POST JSON and return a 2xx response.
+ * formEndpoint accepts POST JSON and returns a 2xx response.
+ * FormSubmit delivers the inquiry to contactEmail.
  */
 window.IA_SITE = {
-  contactEmail: "",
-  formEndpoint: "",
+  contactEmail: "info@iacommunications.tech",
+  formEndpoint: "https://formsubmit.co/ajax/info@iacommunications.tech",
 };

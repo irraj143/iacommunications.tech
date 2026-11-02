@@ -12,13 +12,18 @@
   if (nav) {
     const list = nav.querySelector("ul");
     if (list && !list.querySelector(".nav-phone")) {
-      const phoneItem = document.createElement("li");
-      phoneItem.className = "nav-phone";
-      const phoneLink = document.createElement("a");
-      phoneLink.href = "tel:+923438778331";
-      phoneLink.textContent = "03438778331";
-      phoneItem.appendChild(phoneLink);
-      list.appendChild(phoneItem);
+      [
+        ["tel:+923438778331", "03438778331"],
+        ["tel:+923214553155", "03214553155"],
+      ].forEach(function (pair) {
+        const phoneItem = document.createElement("li");
+        phoneItem.className = "nav-phone";
+        const phoneLink = document.createElement("a");
+        phoneLink.href = pair[0];
+        phoneLink.textContent = pair[1];
+        phoneItem.appendChild(phoneLink);
+        list.appendChild(phoneItem);
+      });
     }
     if (list && !list.querySelector(".nav-extra")) {
       const item = document.createElement("li");
@@ -144,14 +149,35 @@
               "Content-Type": "application/json",
               Accept: "application/json",
             },
-            body: JSON.stringify(payload),
+            body: JSON.stringify(
+              Object.assign({}, payload, {
+                _subject:
+                  payload.formType === "career"
+                    ? "Career application — " + (payload.name || "Applicant")
+                    : "Business inquiry — " + (payload.name || "Website visitor"),
+                _template: "table",
+                _captcha: "false",
+                _replyto: payload.email || "",
+              })
+            ),
           });
-          if (!response.ok) throw new Error("Request failed");
+          const data = await response.json().catch(function () {
+            return {};
+          });
+          if (!response.ok || data.success === false || data.success === "false") {
+            const detail = data.message || "Request failed";
+            if (/activ/i.test(detail)) {
+              throw new Error(
+                "Open info@iacommunications.tech and click the Activate Form link in the email from FormSubmit. After that, submit this form again."
+              );
+            }
+            throw new Error(detail);
+          }
           form.reset();
           showStatus(
             status,
             "success",
-            "Thank you. Your inquiry has been sent. Our team will review your requirements."
+            "Thank you. Your inquiry has been sent to info@iacommunications.tech. Our team will review your requirements."
           );
         } else if (config.contactEmail) {
           const subject = encodeURIComponent(
@@ -165,20 +191,22 @@
           showStatus(
             status,
             "success",
-            "Your email app should open with this inquiry. If it does not, call or WhatsApp 03438778331."
+            "Your email app should open with this inquiry. If it does not, call 03438778331 or 03214553155."
           );
         } else {
           showStatus(
             status,
             "error",
-            "This form is ready, but an email destination has not been configured yet. Please call or WhatsApp 03438778331."
+            "This form is ready, but an email destination has not been configured yet. Please call 03438778331 or 03214553155."
           );
         }
       } catch (error) {
+        const detail = error && error.message && error.message !== "Failed to fetch" ? error.message : "";
         showStatus(
           status,
           "error",
-          "We could not send your inquiry. Please call or WhatsApp 03438778331."
+          detail ||
+            "We could not send your inquiry. Please call 03438778331 or 03214553155, or email info@iacommunications.tech."
         );
       } finally {
         if (submit) submit.disabled = false;
@@ -249,5 +277,48 @@
         return (labels[key] || key) + ": " + payload[key];
       })
       .join("\n");
+  }
+
+  const finePointer = window.matchMedia("(pointer: fine)").matches;
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (finePointer && !reduceMotion) {
+    const ring = document.createElement("div");
+    const dot = document.createElement("div");
+    ring.className = "cursor-ring";
+    dot.className = "cursor-dot";
+    ring.setAttribute("aria-hidden", "true");
+    dot.setAttribute("aria-hidden", "true");
+    document.body.append(ring, dot);
+    dot.style.transform = "translate(" + x + "px, " + y + "px)";
+
+    let x = window.innerWidth / 2;
+    let y = window.innerHeight / 2;
+    let ringX = x;
+    let ringY = y;
+
+    document.addEventListener("mousemove", function (event) {
+      x = event.clientX;
+      y = event.clientY;
+      dot.style.transform = "translate(" + x + "px, " + y + "px)";
+    });
+
+    document.addEventListener("mousedown", function () {
+      ring.classList.add("is-down");
+    });
+    document.addEventListener("mouseup", function () {
+      ring.classList.remove("is-down");
+    });
+    document.addEventListener("mouseover", function (event) {
+      const hot = event.target.closest("a, button, input, textarea, select, label, summary");
+      ring.classList.toggle("is-hot", Boolean(hot));
+    });
+
+    function follow() {
+      ringX += (x - ringX) * 0.18;
+      ringY += (y - ringY) * 0.18;
+      ring.style.transform = "translate(" + ringX + "px, " + ringY + "px)";
+      requestAnimationFrame(follow);
+    }
+    follow();
   }
 })();
